@@ -1,0 +1,284 @@
+#This project analyzes the Covid Data in Scotland to answer the following questions:
+
+#How has the number of covid cases in Scotland changed over time?
+#How has the number of vaccinations in Scotland changed over time?
+#What is the correlation between vaccination rate and death rate?
+#How has deaths in Scotland changed over time?
+#What are the chances of dying if someone has had 3 vaccinations?
+#Which vaccine was most used in Scotland?
+
+
+
+#THE FIRST THING IS TO IMPORT ALL THE REQUIRED MODULES
+import pandas as pd
+import numpy as np
+%matplotlib inline
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+#How has the number of covid cases in Scotland changed over time?
+
+#Create a DataFrame and store the csv file in it, print the contents of the data frame
+covid_cases=pd.read_csv("daily_cuml_scot_20220414.csv")
+covid_cases
+
+#Explore the data to see what are the columns and rows and what are the different values stored in them, method .head() prints out the first 5 lines of the data frame
+covid_cases.head()
+
+#explore the data by printing the last 5 lines of the data frame covid cases to see what values are stored and what is the trend e.g whether values are increasing or decreasing
+covid_cases.tail()
+
+#its best to check what are the different columns in the data so that we have the idea of the data and we can decide whether to keep or delete the columns for the subject of our analysis
+print(covid_cases.columns.values)
+
+#check the data frame value types, if they are how we expect them to me e.g check if date is of format datetime64[ns]
+covid_cases.info()
+
+#Check how many null values each column has so that we can clean our data accordingly, e.g fill in the null values or drop the rows with null values 
+covid_cases.isnull().sum()
+
+#Function to fill in null values so we can reuse it for our other data files  
+def fillnull_values(data_frame):
+    for each_column in data_frame.columns:
+        data_frame[each_column].fillna(0, inplace=True) #fill in the NaN values with zero while modifying the original data frame and check whether the method has performed correctly
+
+fillnull_values(covid_cases) #call function to fill in NaN values
+
+covid_cases.isnull().sum() #check if the function has performed the desired action and how many null values we have now
+
+#Drop the columns we don't require so that data is more simplified for our analysis, we need to look how the cases have changed over time, so important are the daily cases and ummulative cases and deaths column we keep for further analysis
+covid_cases.drop(['PCROnly', 'PCROnlyCumulative', 'LFDOnly', 'LFDOnlyCumulative', 'LFDAndPCR', 'LFDAndPCRCumulative', 'FirstInfections', 'FirstInfectionsCumulative', 'Reinfections', 'ReinfectionsCumulative', 'PercentReinfections', 'PercentReinfectionsCumulative'], axis=1 , inplace=True) 
+covid_cases
+
+#function to get the date format right, to cahnge it from type integer to datetime64[ns] format
+def change_dateformat(data_frame, date_column):
+    data_frame[date_column]=pd.to_datetime(data_frame[date_column], format='%Y%m%d')
+#covid_cases['Date']=pd.to_datetime(covid_cases['Date'], format='%Y%m%d')
+#covid_cases
+
+change_dateformat(covid_cases, 'Date') #function call to get the date format right
+covid_cases 
+
+#plot the result to see how the covid cases changed over time
+plt.figure(figsize=(20,8))
+sns.lineplot(data=covid_cases, x='Date', y='CumulativeCases')
+plt.title('Cumulative Covid Cases in Scotland over 2 years')
+plt.xticks(rotation=45);
+
+#Plot to see the daily cases over time, so we can see when were the maximum cases reported
+plt.figure(figsize=(20,8))
+sns.lineplot(data=covid_cases, x='Date', y='DailyCases')
+plt.title('Daily Covid Cases in Scotland over 2 years')
+plt.xticks(rotation=45);
+
+
+#How has the number of vaccinations in Scotland changed over time?
+#CSV file is stored in data frame called vaccine_scot
+vaccine_scot=pd.read_csv('daily_vacc_scot_20220422.csv')
+vaccine_scot
+
+#explore data to see what are the column types and how many non-null values we have
+vaccine_scot.info()
+
+#names of columns are explored so we can drop the columns not needed
+vaccine_scot.columns.values
+
+#columns are dropped that are not required for q2
+vaccine_scot.drop(['Country', 'PercentCoverage', 'CumulativePercentCoverage', 'AgeBand'], axis=1 , inplace=True)
+vaccine_scot
+
+#check how many null values we have so that we can fill them with some value 
+vaccine_scot.isnull().sum()
+
+fillnull_values(vaccine_scot) #function call to fill in null values
+vaccine_scot.isnull().sum() #confirm that the null values have been filled
+
+vaccine_scot.tail() #print last 5 rows of the data to see whether the number vaccinated and cumulative number increases as expected so we can proceed further with our analysis
+
+vaccine_scot.info() 
+
+change_dateformat(vaccine_scot, 'Date') #function call to get the date format right
+vaccine_scot
+
+vaccine_scot.isnull().sum() #check to see if all null values have been filled
+
+
+vaccine_total=vaccine_scot[vaccine_scot["Product"] == "Total"].copy()
+vaccine_total.head() #check whether the method has been performed and what are the first five rows of our new data frame vaccine_total
+
+#Its seen in our data the when the 'Population' column has the value zero, that row gives us the total number of vaccinations performed on that date by dose, so we extract those totals out for our analysis
+vac=vaccine_total[vaccine_total["Population"] == 0].copy() #make a copy of the data when Population column has a value of 0 and store in new data frame called vac
+vac
+
+#We create another data frame to store the number of people that received dose1, dose2, dose3 and dose4
+dose1=vac[vac["Dose"] == "Dose 1"].copy() #this checks in the 'Dose' column if the value is 'Dose 1' then copies it into the data frame dose1, so that we have the total number of dose 1 vaccination #performed on that date
+dose1
+
+dose2=vac[vac["Dose"] == "Dose 2"].copy() #gets the total number of dose 2 performed
+dose2
+
+dose3=vac[vac["Dose"] == "Dose 3"].copy() #gets the total number of dose 3 performed
+dose3
+
+dose4=vac[vac["Dose"] == "Dose 4"].copy() #gets the total number of dose 4 given 
+dose4
+
+#Plot the total number of vaccinations performed by Dose 
+plt.figure(figsize=(20,8))
+sns.lineplot(data=dose1, x='Date', y='CumulativeNumberVaccinated', color='r', label='Dose 1')
+sns.lineplot(data=dose2, x='Date', y='CumulativeNumberVaccinated', color='g', label='Dose 2')
+sns.lineplot(data=dose3, x='Date', y='CumulativeNumberVaccinated', color='b', label='Dose 3')
+sns.lineplot(data=dose4, x='Date', y='CumulativeNumberVaccinated', color='m', label='Dose 4')
+plt.xlabel("Date")
+plt.ylabel("Total Number of Vaccines Given")
+plt.title("Cumulative Number of Vaccines by Dose")
+plt.xticks(rotation=45)
+plt.legend()
+plt.show();
+
+
+#Plot the daily vaccinations performed in Scotland
+plt.figure(figsize=(20,8))
+sns.lineplot(data=dose1, x='Date', y='NumberVaccinated', color='r', label='Dose 1')
+sns.lineplot(data=dose2, x='Date', y='NumberVaccinated', color='g', label='Dose 2')
+sns.lineplot(data=dose3, x='Date', y='NumberVaccinated', color='b', label='Dose 3')
+sns.lineplot(data=dose4, x='Date', y='NumberVaccinated', color='m', label='Dose 4')
+plt.xlabel("Date")
+plt.ylabel("Total Number of Vaccines Performed")
+plt.title("Daily Number of Vaccines Performed by Dose")
+plt.xticks(rotation=45)
+plt.legend()
+plt.show();
+
+#What is the correlation between vaccination rate and death rate?
+#For this question, the data that was cleaned for q1 and q2 was used and joined together to find the correlation.
+
+#the data frame vac was used here which was again manipulated for this question - q3
+vac
+
+#we use method .groupby to group the data by date and take the sum of all the values for that date, this way it gives us the total number of vaccination performed on that day
+#code for this question understood and applied from https://www.coursera.org/projects/covid19-data-analysis-using-python?
+total_vac_by_date=vac.groupby('Date').sum()
+total_vac_by_date
+
+#Population column and NumberVaccinated column is dropped to make things simpler for analysis
+total_vac_by_date.drop(["Population" , "NumberVaccinated"], axis=1, inplace=True)
+vac_rate=total_vac_by_date.diff() #.diff method is used to find the vaccination rate from the cummulative number vaccinated
+vac_rate
+
+#To find death rate, we use the data frame covid cases we created for q1
+covid_cases
+
+#columns that are not useful are dropped
+death_rate=covid_cases.drop(['DailyCases', 'CumulativeCases'], axis=1)
+
+#index column removed and data was set to index so that two data frames can be combined easily
+death_rate.set_index(['Date'], inplace=True)
+death_rate
+
+death_rate=death_rate.diff()
+
+#columns are joined together to find correlation between them
+cor_dataframe = death_rate.join(vac_rate, how='inner')
+cor_dataframe
+
+#correlation matrix is returned after using .corr method that finds correlation between deaths and cummulative number vaccinated
+cor_dataframe.corr()
+
+#scatterplot is plotted to see how deaths and vaccinations are co-related to each other
+x=cor_dataframe['CumulativeNumberVaccinated']
+y=cor_dataframe['Deaths']
+sns.scatterplot(x, y)
+
+sns.regplot(x, y)
+
+
+#HOW HAS DEATHS IN SCOTLAND CHANGED OVER TIME?
+#covid_cases data frame was used to plot deaths in Scotland
+plt.figure(figsize=(20,8))
+sns.lineplot(data=covid_cases, x='Date', y='Deaths')
+plt.title('Deaths due to Covid in Scotland over 2 years')
+plt.xticks(rotation=45);
+
+
+#WHAT ARE THE CHANCES OF DYING IF SOMEONE HAS HAD 3 VACCINATIONS?
+
+#dose3 dataframe created in q2, is used for analysis of this question
+dose3
+
+#useless columns are dropped
+dose3_vac_rate=dose3.drop(['Product', 'Population','NumberVaccinated','Dose'], axis=1)
+dose3_vac_rate
+
+#Date is made index for easy joining of columns later
+dose3_vac_rate=dose3_vac_rate.set_index(['Date'])
+dose3_vac_rate
+
+#vaccination rate for dose 3 has been calculated
+dose3_vac_rate=dose3_vac_rate.diff()
+
+#columns of death_rate and vaccination rate for dose 3 have been joined to find correlation 
+corr_data_dose3vsdeath = death_rate.join(dose3_vac_rate, how='inner')
+corr_data_dose3vsdeath
+
+#correlation matrix is found to see how death and 3 vaccinations received are related
+corr_data_dose3vsdeath.corr()
+
+#scatterplot
+x=corr_data_dose3vsdeath['CumulativeNumberVaccinated']
+y=corr_data_dose3vsdeath['Deaths']
+sns.scatterplot(x, y)
+
+sns.regplot(x, y)
+
+#WHICH VACCINE WAS MOST COMMON IN SCOTLAND?
+vaccine_types=pd.read_csv('all_delivered_vacc_scot_20220506.csv')
+vaccine_types
+
+#explore data to see what columns it contains
+vaccine_types.columns.values
+
+#columns dropped that are not needed for analysis
+vaccine_types.drop(['Country', 'PercentCoverage', 'AgeBand', 'CumulativePercentCoverage', 'Population', 'CumulativeNumberVaccinated'], axis=1, inplace=True)
+
+#date format changed from int64 to datetime64[ns]
+change_dateformat(vaccine_types, 'Date')
+vaccine_types
+
+#vaccine_types is grouped by the vaccine names and sum is taken so that we have the total number of vaccinations performed of that one particular product
+vaccine_types_common=vaccine_types.groupby('Product').sum()
+vaccine_types_common.head()
+
+#Total row has been dropped as we only need the numbers for 3 of our different vaccines 
+vaccine_types_common.drop(['Total'], inplace=True)
+vaccine_types_common
+
+#bar plot is plotted to see which vaccine was most common overall including all doses
+vaccine_types_common.plot(kind='bar')
+plt.title('The overall most common vaccine used in Scotland');
+
+#Below an analysis is made to see which vaccine was common for each of the three doses.
+
+#groups have been created for the three doses
+vaccine_types_dose=vaccine_types.groupby('Dose')
+vaccine_types_dose
+
+#function to perform the same steps on the three doses so we can reuse it
+def common_vaccine_plot(dataframe, dose_name, column_name):
+    dataframe=dataframe.get_group(dose_name)
+    dataframe=dataframe.groupby(column_name).sum()
+    dataframe.drop(['Total'], inplace=True)
+    dataframe.plot(kind='bar')
+    plt.title('Most common vaccine used for {} in Scotland'.format(dose_name));
+
+common_vaccine_plot(vaccine_types_dose, 'Dose 1', 'Product')
+common_vaccine_plot(vaccine_types_dose, 'Dose 2', 'Product')
+common_vaccine_plot(vaccine_types_dose, 'Dose 3', 'Product')
+
+
+
+
+
+
+
+
